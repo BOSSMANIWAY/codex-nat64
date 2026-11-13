@@ -26,7 +26,7 @@
 Real `codex-network-proxy` binaries, end to end: vulnerable build bypasses the gate (T2 = 200 from
 the private backend), patched build blocks it (T2 = 403), legitimate NAT64 keeps working (T3 = 200).
 
-![Terminal demo: NAT64 SSRF bypass and the fix, 19 seconds](demo/demo.gif)
+![Terminal demo: NAT64 SSRF bypass and the fix, 19 seconds](demo/demo.mp4)
 
 MP4: [`demo/demo.mp4`](demo/demo.mp4) · raw asciicast: [`demo/demo.cast`](demo/demo.cast)
 
@@ -219,30 +219,6 @@ T4 in both builds confirms legitimate NAT64 keeps working — no false positive.
 * Long-term: resolve the destination and classify **every** candidate address the resolver may
   return (A, AAAA, synthesized), not only string literals.
 </details>
-
-## Reporting playbook — what happens next
-
-OpenAI's [SECURITY.md](https://github.com/openai/codex/security/policy) asks for private reports
-via their Bugcrowd program; the scope explicitly covers *"Codex security boundaries, including
-sandboxing, approvals, and network controls"* — this finding is a network-control bypass.
-
-| Step | Channel | Status |
-|------|---------|--------|
-| 1. Vendor report | [OpenAI on Bugcrowd](https://bugcrowd.com/engagements/openai) | not yet submitted |
-| 2. CVE | [GitHub Security Advisory](https://github.com/BOSSMANIWAY/codex-nat64/security/advisories/new) (GitHub is a CNA) | not yet requested |
-| 3. Public advisory | this repository | published |
-
-Suggested order:
-
-1. **Submit to Bugcrowd first.** Attach: the TL;DR + root cause + Stage B matrix from this README,
-   repro tracks A–C, and a link to this repository. Suggested severity: **High** (sandbox
-   network-policy bypass, conditional on DNS64/NAT64 presence). Bugcrowd provides safe harbor.
-2. **Do not** open a public issue on `openai/codex` with exploit details before a fix ships —
-   their policy explicitly requests private reporting.
-3. **Request a CVE** via a private GitHub Security Advisory on this repository; keep it private
-   until the vendor patch lands, then publish with the fix reference.
-4. **Disclosure window:** 90 days is the customary default; update the status table above as the
-   vendor responds (Reported → Triaged → Fixed → Published).
 
 ## Repository map
 
