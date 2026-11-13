@@ -1,0 +1,33 @@
+diff --git a/codex-rs/network-proxy/src/policy.rs b/codex-rs/network-proxy/src/policy.rs
+index 4a6f605..c2f40d4 100644
+--- a/codex-rs/network-proxy/src/policy.rs
++++ b/codex-rs/network-proxy/src/policy.rs
+@@ -387,4 +387,28 @@ mod tests {
+         assert!(is_non_public_ip("fe80::1".parse().unwrap()));
+         assert!(is_non_public_ip("fc00::1".parse().unwrap()));
+     }
++
++    // PoC (CVE candidate / SSRF): RFC 6052 NAT64 Well-Known Prefix 64:ff9b::/96
++    // is not decoded, so DNS64-synthesized AAAA addresses embedding private
++    // IPv4 targets are misclassified as public and allowed by the proxy.
++    #[test]
++    fn nat64_wkp_embedding_private_ipv4_must_be_non_public() {
++        // 64:ff9b::a14:a == 0064:ff9b:...:0a14:000a -> embeds 10.20.0.10.
++        let wkp_private: IpAddr = "64:ff9b::a14:a".parse().unwrap();
++        assert!(
++            is_non_public_ip(wkp_private),
++            "64:ff9b::a14:a embeds the private IPv4 address 10.20.0.10 (RFC 6052 WKP) \
++             and must be classified as non-public, otherwise the proxy allows \
++             connections into private address space via NAT64"
++        );
++        // Another private embedding: 64:ff9b::c0a8:101 -> 192.168.1.1.
++        assert!(is_non_public_ip("64:ff9b::c0a8:101".parse().unwrap()));
++    }
++
++    #[test]
++    fn nat64_wkp_public_embedding_stays_public() {
++        // Legitimate NAT64 to a public destination (8.8.8.8) must stay allowed
++        // so a fix does not break real DNS64/NAT64 deployments.
++        assert!(!is_non_public_ip("64:ff9b::808:808".parse().unwrap()));
++    }
+ }

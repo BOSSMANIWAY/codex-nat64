@@ -1,0 +1,15 @@
+rustc 1.95.0 (59807616e 2026-04-14)
+== Stage A: is_non_public_ip classifier (verbatim functions from policy.rs)
+== upstream commit c0cc9fc820f62e4dbdde68214dd6d792d6c8a7ee (main)
+
+NAT64 WKP + private v4 [64:ff9b::a14:a]  vulnerable=false fixed=true 
+plain private v4 [10.20.0.10]            vulnerable=true  fixed=true 
+NAT64 WKP + public v4 [64:ff9b::808:808] vulnerable=false fixed=false
+public v4 [8.8.8.8]                      vulnerable=false fixed=false
+IPv4-mapped private [::ffff:10.0.0.1]    vulnerable=true  fixed=true 
+IPv4-mapped public [::ffff:8.8.8.8]      vulnerable=false fixed=false
+loopback v6 [::1]                        vulnerable=true  fixed=true 
+unique-local [fc00::1]                   vulnerable=true  fixed=true 
+link-local [fe80::1]                     vulnerable=true  fixed=true 
+
+VERDICT: CONFIRMED - 64:ff9b::a14:a (embeds private 10.20.0.10) is classified as PUBLIC

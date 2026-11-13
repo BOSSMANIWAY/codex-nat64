@@ -1,0 +1,6 @@
+backend listening on 10.20.0.10:80
+backend listening on 64:ff9b::a14:a:80
+backend listening on 64:ff9b::808:808:80
+GET / host=10.20.0.10 -> 200
+GET / host=web.internal.corp -> 200
+GET / host=publicnat.internal.corp -> 200

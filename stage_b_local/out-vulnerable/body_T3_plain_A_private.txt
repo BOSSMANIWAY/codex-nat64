@@ -1,0 +1,1 @@
+{"status":"blocked","host":"plainv4.internal.corp","reason":"not_allowed_local","decision":"deny","source":"baseline_policy","protocol":"http","port":80,"message":"Sandbox policy blocks local/private network addresses."}

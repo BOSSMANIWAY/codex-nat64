@@ -1,0 +1,31 @@
+== [1] netns setup ==
+resolver IPs hijacked locally: 100.100.2.136
+100.100.2.138
+nameservers used by proxy (unchanged): 2 entries in /etc/resolv.conf (NOT modified)
+== [2] services ==
+backend direct reachability check (bypassing proxy): HTTP 200
+== [3] tests through the proxy (127.0.0.1:8080) ==
+---- TEST T1_direct_private_ipv4: GET http://10.20.0.10/ ----
+HTTP_CODE=403
+---- TEST T2_dns64_synthesized: GET http://web.internal.corp/ ----
+HTTP_CODE=200
+---- TEST T3_plain_A_private: GET http://plainv4.internal.corp/ ----
+HTTP_CODE=403
+---- TEST T4_dns64_public: GET http://publicnat.internal.corp/ ----
+HTTP_CODE=200
+== [4] decision log (proxy) ==
+2026-11-13T08:43:16.190320Z  WARN codex_network_proxy::http_proxy: request blocked (client=127.0.0.1:51134, host=10.20.0.10, reason=not_allowed_local)
+2026-11-13T08:43:16.197042Z  INFO codex_network_proxy::upstream: HTTP upstream route selected (target=web.internal.corp:80, route=direct)
+2026-11-13T08:43:16.197844Z  INFO codex_network_proxy::upstream: HTTP upstream connection established (target=web.internal.corp:80, elapsed_ms=0)
+2026-11-13T08:43:16.198318Z  INFO codex_network_proxy::upstream: HTTP upstream response headers received (target=web.internal.corp:80, elapsed_ms=0)
+2026-11-13T08:43:16.204380Z  WARN codex_network_proxy::http_proxy: request blocked (client=127.0.0.1:51148, host=plainv4.internal.corp, reason=not_allowed_local)
+2026-11-13T08:43:16.209978Z  INFO codex_network_proxy::upstream: HTTP upstream route selected (target=publicnat.internal.corp:80, route=direct)
+2026-11-13T08:43:16.210311Z  INFO codex_network_proxy::upstream: HTTP upstream connection established (target=publicnat.internal.corp:80, elapsed_ms=0)
+2026-11-13T08:43:16.210829Z  INFO codex_network_proxy::upstream: HTTP upstream response headers received (target=publicnat.internal.corp:80, elapsed_ms=0)
+== [5] done (mode=vulnerable) ==
+
+===== RESULT BODIES =====
+[T1_direct_private_ipv4] {"status":"blocked","host":"10.20.0.10","reason":"not_allowed_local","decision":"deny","source":"baseline_policy","protocol":"http","port":80,"message":"Sandbox policy blocks local/private network addresses."}
+[T2_dns64_synthesized] Intra-VPC Connectivity Verified! backend=10.20.0.10 route=web.internal.corp
+[T3_plain_A_private] {"status":"blocked","host":"plainv4.internal.corp","reason":"not_allowed_local","decision":"deny","source":"baseline_policy","protocol":"http","port":80,"message":"Sandbox policy blocks local/private network addresses."}
+[T4_dns64_public] Intra-VPC Connectivity Verified! backend=10.20.0.10 route=publicnat.internal.corp

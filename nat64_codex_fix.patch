@@ -1,0 +1,49 @@
+diff --git a/codex-rs/network-proxy/src/policy.rs b/codex-rs/network-proxy/src/policy.rs
+index 4a6f605..2b9f7a8 100644
+--- a/codex-rs/network-proxy/src/policy.rs
++++ b/codex-rs/network-proxy/src/policy.rs
+@@ -126,6 +126,15 @@ fn is_non_public_ipv6(ip: Ipv6Addr) -> bool {
+     if let Some(v4) = ip.to_ipv4() {
+         return is_non_public_ipv4(v4) || ip.is_loopback();
+     }
++    // RFC 6052 NAT64 Well-Known Prefix 64:ff9b::/96 embeds an IPv4 address in
++    // the low 32 bits; DNS64 synthesizes this form for IPv4-only hosts and a
++    // NAT64 gateway connects to the embedded address. Classify the embedded
++    // address, not the prefix, so `64:ff9b::a14:a` (embeds 10.20.0.10) is
++    // treated as non-public instead of slipping through as "global unicast".
++    let o = ip.octets();
++    if o[0..12] == [0x00, 0x64, 0xFF, 0x9B, 0, 0, 0, 0, 0, 0, 0, 0] {
++        return is_non_public_ipv4(Ipv4Addr::new(o[12], o[13], o[14], o[15]));
++    }
+     // Treat anything that isn't globally routable as "local" for SSRF prevention. In particular:
+     //  - `::1` loopback
+     //  - `fc00::/7` unique-local (RFC 4193)
+@@ -387,4 +396,28 @@ mod tests {
+         assert!(is_non_public_ip("fe80::1".parse().unwrap()));
+         assert!(is_non_public_ip("fc00::1".parse().unwrap()));
+     }
++
++    // PoC (CVE candidate / SSRF): RFC 6052 NAT64 Well-Known Prefix 64:ff9b::/96
++    // is not decoded, so DNS64-synthesized AAAA addresses embedding private
++    // IPv4 targets are misclassified as public and allowed by the proxy.
++    #[test]
++    fn nat64_wkp_embedding_private_ipv4_must_be_non_public() {
++        // 64:ff9b::a14:a == 0064:ff9b:...:0a14:000a -> embeds 10.20.0.10.
++        let wkp_private: IpAddr = "64:ff9b::a14:a".parse().unwrap();
++        assert!(
++            is_non_public_ip(wkp_private),
++            "64:ff9b::a14:a embeds the private IPv4 address 10.20.0.10 (RFC 6052 WKP) \
++             and must be classified as non-public, otherwise the proxy allows \
++             connections into private address space via NAT64"
++        );
++        // Another private embedding: 64:ff9b::c0a8:101 -> 192.168.1.1.
++        assert!(is_non_public_ip("64:ff9b::c0a8:101".parse().unwrap()));
++    }
++
++    #[test]
++    fn nat64_wkp_public_embedding_stays_public() {
++        // Legitimate NAT64 to a public destination (8.8.8.8) must stay allowed
++        // so a fix does not break real DNS64/NAT64 deployments.
++        assert!(!is_non_public_ip("64:ff9b::808:808".parse().unwrap()));
++    }
+ }

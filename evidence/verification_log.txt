@@ -1,0 +1,69 @@
+Verification log - NAT64 WKP SSRF in codex-rs/network-proxy
+===========================================================
+
+Target:     openai/codex, codex-rs/network-proxy
+Commit:     c0cc9fc820f62e4dbdde68214dd6d792d6c8a7ee (main)
+Date:       2026-11-13
+Environment: Linux x86_64 sandbox, rustc 1.95.0 (59807616e 2026-04-14),
+             cargo 1.95.0, workspace manifest identical to upstream except
+             v8-poc / code-mode-host / code-mode-runtime members excluded
+             (their rusty-v8 git dependency is not needed for network-proxy).
+
+Phase 1 - Source review
+-----------------------
+network-proxy/src/policy.rs, is_non_public_ipv6():
+  * decodes only IPv4-mapped / IPv4-compatible addresses via Ipv6Addr::to_ipv4();
+  * no handling of RFC 6052 NAT64 Well-Known Prefix 64:ff9b::/96;
+  * 64:ff9b::a14:a (embeds 10.20.0.10) falls through every check -> "public".
+Related: is_private_network_ip() in the same file shares the to_ipv4() blind spot.
+
+Phase 2 - Stage A (verbatim classifier, standalone rustc)
+---------------------------------------------------------
+File: stage_a_classifier_test.rs (functions copied byte-for-byte from policy.rs)
+Compile/run: rustc 1.95.0, -O
+Log: evidence/stage_a_rust_output_1.95.txt
+Key line:
+  NAT64 WKP + private v4 [64:ff9b::a14:a]  vulnerable=false fixed=true
+  VERDICT: CONFIRMED - 64:ff9b::a14:a (embeds private 10.20.0.10) is classified as PUBLIC
+
+Phase 3 - PoC unit tests in the real crate (cargo test -p codex-network-proxy)
+------------------------------------------------------------------------------
+Vulnerable tree (+ nat64_codex_positive_poc.patch):
+  Log: evidence/cargo_test_vulnerable_run.txt
+  test policy::tests::nat64_wkp_embedding_private_ipv4_must_be_non_public ... FAILED
+  test policy::tests::nat64_wkp_public_embedding_stays_public ... ok
+  test result: FAILED. 347 passed; 1 failed; 0 ignored; 0 measured
+Patched tree (+ nat64_codex_fix.patch, includes the same tests):
+  Log: evidence/cargo_test_fixed_run.txt
+  test result: ok. 348 passed; 0 failed; 0 ignored; 0 measured
+
+Phase 4 - Stage B (end-to-end differential test of the real proxy binary)
+-------------------------------------------------------------------------
+Harness: stage_b_local/run.sh inside `unshare -rn` (user+network namespace, no root):
+  * dns64_server.py answers the sandbox resolver addresses on :53;
+    web.internal.corp -> AAAA 64:ff9b::a14:a (DNS64 synthesis, embeds 10.20.0.10);
+    plainv4.internal.corp -> A 10.20.0.10; publicnat.internal.corp -> AAAA 64:ff9b::808:808;
+  * backend.py serves a marker body from 10.20.0.10:80, [64:ff9b::a14:a]:80 and
+    [64:ff9b::808:808]:80;
+  * `ip -6 route add local 64:ff9b::/96 dev lo` makes the WKP locally routable -
+    the same flow a NAT64 gateway produces from the proxy's point of view;
+  * all three hostnames are on the proxy allowlist (stage_b_local/cfg.json);
+  * real codex-network-proxy binary, RUST_LOG=info, HTTP proxy on 127.0.0.1:8080.
+
+Vulnerable binary (release build from pristine c0cc9fc): stage_b_local/out-vulnerable/
+  T1_direct_private_ipv4  http://10.20.0.10/              HTTP 403 (blocked)
+  T2_dns64_synthesized    http://web.internal.corp/       HTTP 200  <-- BYPASS
+      body: Intra-VPC Connectivity Verified! backend=10.20.0.10 route=web.internal.corp
+  T3_plain_A_private      http://plainv4.internal.corp/   HTTP 403 (blocked)
+  T4_dns64_public         http://publicnat.internal.corp/ HTTP 200 (legit NAT64)
+  decision log: "request blocked (... host=10.20.0.10, reason=not_allowed_local)"
+                "HTTP upstream connection established (target=web.internal.corp:80)"
+
+Patched binary (same build with nat64_codex_fix.patch): stage_b_local/out-fixed/
+  T1 403 (blocked)   T2 403 (bypass CLOSED)   T3 403 (blocked)   T4 200 (no false positive)
+
+Conclusion
+----------
+The private-address gate of codex-network-proxy is bypassable through the RFC 6052
+NAT64 Well-Known Prefix end-to-end with the real binary. The one-line WKP decode fix
+closes the bypass and does not break legitimate NAT64 traffic.

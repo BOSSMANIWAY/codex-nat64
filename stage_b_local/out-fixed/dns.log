@@ -1,0 +1,14 @@
+dns64 server ready on :53 (udp+tcp)
+[udp 100.100.2.136] 12? 10.0.20.10.in-addr.arpa.
+[udp 100.100.2.136] 12? a.0.0.0.4.1.a.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.9.f.f.4.6.0.0.ip6.arpa.
+[udp 100.100.2.136] 12? 8.0.8.0.8.0.8.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.b.9.f.f.4.6.0.0.ip6.arpa.
+[udp 100.100.2.136] A? web.internal.corp.
+[udp 100.100.2.136] AAAA? web.internal.corp.
+[udp 100.100.2.136] A? plainv4.internal.corp.
+[udp 100.100.2.136] AAAA? plainv4.internal.corp.
+[udp 100.100.2.136] A? publicnat.internal.corp.
+[udp 100.100.2.136] AAAA? publicnat.internal.corp.
+[udp 100.100.2.138] A? publicnat.internal.corp.
+[udp 100.100.2.136] AAAA? publicnat.internal.corp.
+[udp 100.100.2.136] A? publicnat.internal.corp.
+[udp 100.100.2.138] AAAA? publicnat.internal.corp.

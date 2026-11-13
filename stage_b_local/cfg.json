@@ -1,0 +1,15 @@
+{
+  "network": {
+    "enabled": true,
+    "proxy_url": "http://127.0.0.1:8080",
+    "enable_socks5": false,
+    "enable_socks5_udp": false,
+    "allow_upstream_proxy": false,
+    "mode": "full",
+    "domains": {
+      "web.internal.corp": "allow",
+      "plainv4.internal.corp": "allow",
+      "publicnat.internal.corp": "allow"
+    }
+  }
+}
