@@ -26,7 +26,7 @@
 Real `codex-network-proxy` binaries, end to end: vulnerable build bypasses the gate (T2 = 200 from
 the private backend), patched build blocks it (T2 = 403), legitimate NAT64 keeps working (T3 = 200).
 
-![Terminal demo: NAT64 SSRF bypass and the fix, 19 seconds](demo/demo.mp4)
+![Terminal demo: NAT64 SSRF bypass and the fix, 19 seconds](demo/demo.gif)
 
 MP4: [`demo/demo.mp4`](demo/demo.mp4) · raw asciicast: [`demo/demo.cast`](demo/demo.cast)
 
